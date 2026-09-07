@@ -226,7 +226,7 @@ Job progress events (`JobProgressEvent`) carry: `event` type, `file` currently b
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/health` | Server health — db connectivity, embedder info, scheduler status |
+| `GET` | `/health` | Server liveness/readiness, version, and database connectivity |
 
 ---
 
