@@ -167,6 +167,73 @@ _TYPE_ONLY_SOURCES = {
 
 
 class TestTsTypeUseEdges:
+    def test_generic_argument_resolves_ambient_type(self, tmp_path: Path) -> None:
+        graph = _build_graph(
+            tmp_path,
+            {
+                "global.d.ts": (
+                    "declare global { interface IRuntimeEnv { apiUrl: string } }\n"
+                    "export {}\n"
+                ),
+                "consumer.ts": (
+                    "function read(): Partial<IRuntimeEnv> {\n"
+                    "  return decodeAppConfig<IRuntimeEnv>('payload')\n"
+                    "}\n"
+                ),
+            },
+        )
+        edge = graph.get_edge_data("consumer.ts", "global.d.ts", {})
+        assert edge["edge_type"] == "type_use"
+        assert "IRuntimeEnv" in edge["type_uses"]
+
+    def test_unique_global_declaration_emits_file_type_use(self, tmp_path: Path) -> None:
+        graph = _build_graph(
+            tmp_path,
+            {
+                "global.d.ts": "interface IRuntimeEnv { apiUrl: string }\n",
+                "consumer.ts": (
+                    "export function readEnv(env: IRuntimeEnv): string { return env.apiUrl }\n"
+                ),
+            },
+        )
+        edge = graph.get_edge_data("consumer.ts", "global.d.ts", {})
+        assert edge
+        assert edge["edge_type"] == "type_use"
+        assert "IRuntimeEnv" in edge["type_uses"]
+
+    def test_exported_module_declaration_is_not_treated_as_global(self, tmp_path: Path) -> None:
+        graph = _build_graph(
+            tmp_path,
+            {
+                "types.d.ts": "export interface IRuntimeEnv { apiUrl: string }\n",
+                "consumer.ts": (
+                    "export function readEnv(env: IRuntimeEnv): string { return env.apiUrl }\n"
+                ),
+            },
+        )
+        assert not graph.has_edge("consumer.ts", "types.d.ts")
+
+    def test_module_declaration_only_resolves_names_inside_declare_global(
+        self, tmp_path: Path
+    ) -> None:
+        graph = _build_graph(
+            tmp_path,
+            {
+                "types.d.ts": (
+                    "export {};\n"
+                    "declare global { interface IRuntimeEnv { apiUrl: string } }\n"
+                    "export interface ModuleOnly { value: string }\n"
+                ),
+                "consumer.ts": (
+                    "export function readEnv(env: IRuntimeEnv): string { return env.apiUrl }\n"
+                    "export function readModuleType(value: ModuleOnly): string { return value.value }\n"
+                ),
+            },
+        )
+        edge = graph.get_edge_data("consumer.ts", "types.d.ts", {})
+        assert edge and "IRuntimeEnv" in edge["type_uses"]
+        assert "ModuleOnly" not in edge["type_uses"]
+
     def test_type_only_import_produces_type_use_provenance(
         self, tmp_path: Path
     ) -> None:
