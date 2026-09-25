@@ -1334,7 +1334,7 @@ class DeadCodeAnalyzer:
                 # parser stamps these intra-module references on the file node
                 # (see ``ingestion/python_local_refs.py``); treat them as live.
                 local_refs = node_data.get("local_refs")
-                if local_refs and sym_name in local_refs:
+                if node_data.get("language") == "python" and local_refs and sym_name in local_refs:
                     continue
 
                 is_deprecated = _is_symbol_deprecated(
@@ -1661,6 +1661,12 @@ class DeadCodeAnalyzer:
                 in REACHABILITY_USE_EDGE_TYPES
                 for pred in self.graph.predecessors(node)
             )
+            # TS/JS value references do not necessarily produce symbol-level
+            # call edges. Ingestion stamps them on the file node so handlers
+            # such as ``process.on('SIGTERM', shutdown)`` remain live.
+            local_refs = file_data.get("local_refs")
+            if local_refs and sym_name in local_refs:
+                is_used = True
             if is_used:
                 continue
 
