@@ -113,16 +113,16 @@ def test_ts_value_references_rescue_only_referenced_private_symbols(tmp_path):
 
 
 def test_ts_local_use_does_not_hide_unused_export():
-    path = "server/src/utils/appRoutes.ts"
+    path = "sample/src/routes.ts"
     graph = _build_graph(
         nodes={
             path: {
                 "is_entry_point": False,
                 "is_test": False,
-                "local_refs": frozenset({"APP_SERVER_ROUTES"}),
+                "local_refs": frozenset({"LOCAL_ONLY_ROUTES"}),
                 "symbols": [
                     {
-                        "name": "APP_SERVER_ROUTES",
+                        "name": "LOCAL_ONLY_ROUTES",
                         "kind": "variable",
                         "language": "typescript",
                         "visibility": "public",
@@ -141,7 +141,7 @@ def test_ts_local_use_does_not_hide_unused_export():
     )
     assert any(
         finding.kind == DeadCodeKind.UNUSED_EXPORT
-        and finding.symbol_name == "APP_SERVER_ROUTES"
+        and finding.symbol_name == "LOCAL_ONLY_ROUTES"
         for finding in report.findings
     )
 
